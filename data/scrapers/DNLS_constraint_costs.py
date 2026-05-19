@@ -175,42 +175,216 @@ def fetch_datastore(resource_id: str) -> tuple[list[dict[str, Any]], list[dict[s
 
 # ---------------------------------------------------------------------------
 # Schema reference. First run writes it; subsequent runs validate against it.
-# Format: list of {id, type, unit} — the minimum needed for drift detection.
+#
+# Validation rule (changelog v0.4, M-7): we validate value SHAPE, not CKAN's
+# `type` field. CKAN reports the same logical column with different `type`
+# values across resources in this package — Date as `date` or `timestamp`,
+# Thermal constraints cost as `numeric` or `text` — without the underlying
+# values changing shape. CKAN's type metadata is not a reliable signal in
+# this dataset, so we infer a `value_class` from observed values on freeze
+# and validate values against that class on every subsequent fetch.
+#
+# value_class is one of: "integer", "numeric", "date", "text".
+# Inference is conservative — ambiguous columns fall through to "text" and
+# become no-op for validation purposes.
+#
+# What still counts as drift (hard-fail):
+#   - column added / removed / renamed
+#   - column unit changed
+#   - column value_class changed
+#   - a value failing its value_class rule
+#
+# What doesn't count as drift any more:
+#   - CKAN `type` changing (numeric ↔ text, date ↔ timestamp, etc.)
+#   - values returned as strings rather than JSON numbers, if parseable
+#
+# Methodology source of truth: changelog v0.4 M-7 through M-9.
 # ---------------------------------------------------------------------------
 
-def schema_signature(fields: list[dict[str, Any]]) -> list[dict[str, str | None]]:
-    """Reduce CKAN field metadata to the validation-relevant subset."""
+import re
+
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def is_integer_value(v: Any) -> bool:
+    """Whole-number value: JSON int, or string parseable as int."""
+    if isinstance(v, bool):  # bool is a subclass of int; exclude it.
+        return False
+    if isinstance(v, int):
+        return True
+    if isinstance(v, str):
+        try:
+            int(v)
+            return True
+        except ValueError:
+            return False
+    return False
+
+
+def is_numeric_value(v: Any) -> bool:
+    """Numeric value: JSON int/float, or string parseable as float."""
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, (int, float)):
+        return True
+    if isinstance(v, str):
+        try:
+            float(v)
+            return True
+        except ValueError:
+            return False
+    return False
+
+
+def is_date_value(v: Any) -> bool:
+    """YYYY-MM-DD string. Accepts an optional T-suffix (CKAN timestamp form)
+    but only checks the leading 10 chars."""
+    if not isinstance(v, str):
+        return False
+    return bool(DATE_RE.match(v[:10])) and (len(v) == 10 or v[10] == "T")
+
+
+def infer_value_class(values: list[Any]) -> str:
+    """Infer the value_class of a column from observed non-null values.
+
+    Order matters: integer is tested before numeric because every int is also
+    float-parseable. Conservative fallback to text for mixed/ambiguous columns.
+    """
+    non_null = [v for v in values if v is not None]
+    if not non_null:
+        # No data to infer from. Mark as text (no-op validation).
+        return "text"
+    if all(is_integer_value(v) for v in non_null):
+        return "integer"
+    if all(is_numeric_value(v) for v in non_null):
+        return "numeric"
+    if all(is_date_value(v) for v in non_null):
+        return "date"
+    return "text"
+
+
+VALUE_CHECKERS = {
+    "integer": is_integer_value,
+    "numeric": is_numeric_value,
+    "date": is_date_value,
+    "text": lambda v: True,
+}
+
+
+def schema_signature(fields: list[dict[str, Any]],
+                     records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Reduce CKAN field metadata + observed values to validation signature.
+
+    Stores ckan_type for audit but not validation. value_class is the source
+    of truth for what shape the column actually holds.
+    """
     sig = []
     for f in fields:
+        col_id = f["id"]
+        values = [r.get(col_id) for r in records]
         sig.append({
-            "id": f["id"],
-            "type": f["type"],
+            "id": col_id,
             "unit": f.get("info", {}).get("unit"),
+            "value_class": infer_value_class(values),
+            "ckan_type": f["type"],
         })
     return sig
 
 
-def validate_or_freeze_schema(fields: list[dict[str, Any]], resource_label: str) -> None:
-    """First run: write schema reference. Later runs: hard-fail on drift."""
-    current = schema_signature(fields)
+def validate_values(frozen_sig: list[dict[str, Any]],
+                    records: list[dict[str, Any]],
+                    resource_label: str) -> list[str]:
+    """Check every value in records against its frozen value_class.
+
+    Returns list of error strings (empty if all pass).
+    """
+    errors = []
+    for entry in frozen_sig:
+        col_id = entry["id"]
+        vc = entry["value_class"]
+        checker = VALUE_CHECKERS.get(vc, lambda v: True)
+        for i, r in enumerate(records):
+            v = r.get(col_id)
+            if v is None:
+                continue  # null values are allowed; revisit if it generates noise
+            if not checker(v):
+                errors.append(
+                    f"{resource_label}: row {i} column {col_id!r} expected "
+                    f"value_class={vc} but got value={v!r} ({type(v).__name__})"
+                )
+                # Stop reporting more errors for this column after the first.
+                break
+    return errors
+
+
+def schemas_match(frozen: list[dict[str, Any]],
+                  current: list[dict[str, Any]]) -> tuple[bool, list[str]]:
+    """Compare frozen vs current signature. Returns (match, diffs).
+
+    Only the structural fields are compared here (id, unit, value_class).
+    ckan_type is recorded but not validated against.
+    """
+    diffs = []
+    if len(frozen) != len(current):
+        diffs.append(f"field count: frozen={len(frozen)} current={len(current)}")
+        return False, diffs
+    for f, c in zip(frozen, current):
+        if f["id"] != c["id"]:
+            diffs.append(f"column rename: {f['id']!r} → {c['id']!r}")
+        if f["unit"] != c["unit"]:
+            diffs.append(f"unit change on {f['id']!r}: {f['unit']!r} → {c['unit']!r}")
+        if f["value_class"] != c["value_class"]:
+            diffs.append(
+                f"value_class change on {f['id']!r}: "
+                f"{f['value_class']!r} → {c['value_class']!r}"
+            )
+    return len(diffs) == 0, diffs
+
+
+def validate_or_freeze_schema(fields: list[dict[str, Any]],
+                              records: list[dict[str, Any]],
+                              resource_label: str) -> None:
+    """First run: write schema reference inferred from values.
+    Later runs: validate structure (ids, units, value_class) and per-row values.
+    Hard-fails on any drift, preserving cached data.
+    """
+    current = schema_signature(fields, records)
     if not SCHEMA_FILE.exists():
         SCHEMA_FILE.parent.mkdir(parents=True, exist_ok=True)
         with SCHEMA_FILE.open("w") as f:
             json.dump(current, f, indent=2)
         print(f"[schema] froze schema reference at {SCHEMA_FILE} "
-              f"({len(current)} fields)")
+              f"({len(current)} fields, inferred from {resource_label})")
+        for entry in current:
+            print(f"[schema]   {entry['id']!r}: value_class={entry['value_class']} "
+                  f"(ckan_type={entry['ckan_type']}, unit={entry['unit']!r})")
         return
     with SCHEMA_FILE.open() as f:
         frozen = json.load(f)
-    if current != frozen:
-        # Print a helpful diff before bailing.
-        print("[schema] DRIFT DETECTED on resource:", resource_label)
-        print("[schema] frozen schema:")
+    # Structural check
+    ok, diffs = schemas_match(frozen, current)
+    if not ok:
+        print(f"[schema] STRUCTURAL DRIFT on {resource_label}:")
+        for d in diffs:
+            print(f"[schema]   {d}")
+        print("[schema] frozen signature:")
         print(json.dumps(frozen, indent=2))
-        print("[schema] current schema:")
+        print("[schema] current signature:")
         print(json.dumps(current, indent=2))
         raise RuntimeError(
-            f"Schema drift on {resource_label}. Cached data preserved. "
+            f"Schema structural drift on {resource_label}. Cached data preserved. "
+            f"Investigate manually before next run."
+        )
+    # Value-shape check
+    errors = validate_values(frozen, records, resource_label)
+    if errors:
+        print(f"[schema] VALUE DRIFT on {resource_label}:")
+        for e in errors[:10]:  # cap noise
+            print(f"[schema]   {e}")
+        if len(errors) > 10:
+            print(f"[schema]   ... and {len(errors) - 10} more")
+        raise RuntimeError(
+            f"Value-shape drift on {resource_label}. Cached data preserved. "
             f"Investigate manually before next run."
         )
 
@@ -333,7 +507,7 @@ def main() -> int:
 
         print(f"[fetch] {label} (was {prev or 'never'}, now {last_mod})")
         fields, records = fetch_datastore(rid)
-        validate_or_freeze_schema(fields, label)
+        validate_or_freeze_schema(fields, records, label)
         archive_csv(r)
         records_by_resource[rid] = records
         state_after[rid] = last_mod
@@ -350,7 +524,7 @@ def main() -> int:
         for rid in skipped:
             r = next(x for x in resources if x["id"] == rid)
             fields, records = fetch_datastore(rid)
-            validate_or_freeze_schema(fields, f"{resource_meta[rid]['fy_label']} ({rid})")
+            validate_or_freeze_schema(fields, records, f"{resource_meta[rid]['fy_label']} ({rid})")
             records_by_resource[rid] = records
             print(f"[refetch] {resource_meta[rid]['fy_label']}: {len(records)} records")
 

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "_id",
+    "unit": null,
+    "value_class": "integer",
+    "ckan_type": "int"
+  },
+  {
+    "id": "Date",
+    "unit": "ISO 8601",
+    "value_class": "date",
+    "ckan_type": "timestamp"
+  },
+  {
+    "id": "Reducing largest loss cost",
+    "unit": "\u00a3",
+    "value_class": "integer",
+    "ckan_type": "numeric"
+  },
+  {
+    "id": "Increasing system inertia cost",
+    "unit": "\u00a3",
+    "value_class": "integer",
+    "ckan_type": "numeric"
+  },
+  {
+    "id": "Voltage constraints cost",
+    "unit": "\u00a3",
+    "value_class": "integer",
+    "ckan_type": "numeric"
+  },
+  {
+    "id": "Thermal constraints cost",
+    "unit": "\u00a3",
+    "value_class": "integer",
+    "ckan_type": "numeric"
+  },
+  {
+    "id": "Reducing largest loss volume",
+    "unit": "MWh",
+    "value_class": "integer",
+    "ckan_type": "numeric"
+  },
+  {
+    "id": "Increasing system inertia volume",
+    "unit": "MWh",
+    "value_class": "integer",
+    "ckan_type": "numeric"
+  },
+  {
+    "id": "Voltage constraints volume",
+    "unit": "MWh",
+    "value_class": "integer",
+    "ckan_type": "numeric"
+  },
+  {
+    "id": "Thermal constraints volume",
+    "unit": "MWh",
+    "value_class": "integer",
+    "ckan_type": "numeric"
+  }
+]

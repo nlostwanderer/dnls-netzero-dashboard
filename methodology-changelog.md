@@ -76,60 +76,139 @@ The following items were touched on during the 4 May 2026 session but are not ye
 - The three-tracker architecture (`ADR-001` decision 4) is unchanged. Context cards live within the infrastructure tracker, distinguished visually but not architecturally.
 - The opportunities and major projects rubrics are unchanged.
 
+### Review trigger for v0.2
+
+Re-examined at week 10 ship/shelve decision alongside the rest of the rubric. Specific questions:
+
+- Did the context-card pattern actually look distinct enough from scored cards to readers, or did the visual separation fail?
+- Did the explainer copy hold the editorial line on thermal-cost ≠ curtailment-payments, or did it drift?
+- Did the held-back columns (volumes, non-headline costs) generate reader friction?
+- Did anyone find documentation of the volume sign convention during the build, and if so what does the methodology say about it now?
+
 ---
 
 ## v0.3 — 5 May 2026 — Schema validation: type equivalence rule
 
 **Trigger:** First production run of the constraint costs scraper (5 May 2026) failed validation against the 2019-20 resource. Root cause was not a real schema breakage but per-resource variation in CKAN's `type` metadata: the 2017-18 and 2018-19 resources type the `Date` column as `timestamp`, while 2019-20 onwards type it as `date`. Same column, same unit, same value shape. The original validation rule in `ADR-002` decision 7 treated this as drift and hard-failed; this entry refines the definition of drift.
 
+**Note:** This entry is superseded by v0.4 (M-7) the same day. Left in place as historical record of the intermediate approach.
+
 ### Changes
 
-#### M-6. CKAN type equivalence rule
+#### M-6. CKAN type equivalence rule (SUPERSEDED by v0.4 M-7)
 
-The schema validation rule introduced in `ADR-002` decision 7 is refined as follows. Two field types are treated as **equivalent** for validation purposes if they are documented in the equivalence table below. Any drift between equivalent types is not flagged.
+The schema validation rule introduced in `ADR-002` decision 7 was refined to treat certain CKAN types as equivalent for validation purposes. Initial equivalence table contained one class: `date` ↔ `timestamp`.
 
-Initial equivalence table:
+This approach was abandoned within hours when a second, different CKAN type inconsistency surfaced on the 2025-26 resource (`numeric` ↔ `text` on `Thermal constraints cost`). The pattern revealed that CKAN's per-resource type metadata is not a reliable signal in this dataset, so an equivalence table would have required indefinite extension. v0.4 supersedes this approach with value-shape validation that doesn't rely on CKAN's type field at all.
 
-| Class | Equivalent CKAN types |
-|-------|----------------------|
-| Date-like | `date`, `timestamp` |
-
-Additions to this table require a methodology changelog entry. The equivalence table lives in the scraper source (`data/scrapers/scrape.py`, `TYPE_EQUIVALENCE` constant) and is referenced from this changelog as the methodology source of truth.
-
-**What still counts as drift (unchanged):**
-
-- A column being added, removed, or renamed.
-- A column's `unit` changing.
-- A column's `type` changing to one outside its current equivalence class (e.g. `numeric` → `text`).
-- A change in the number of fields.
-
-**Reasoning:**
-
-- The discovery work supporting `ADR-002` sampled only two FY resources (2024-25 and 2026-27). Both happened to use `date` for the Date column. The variation in older resources was not visible at the time the validation rule was written.
-- The values returned in the records are JSON-typed (string for both `date` and `timestamp` cases, parsed by downstream code), so there is no operational impact from the type variation. Treating it as drift would block the scraper without a real underlying problem.
-- Throwing the type check away entirely (which was the alternative considered) would lose the ability to catch genuine type changes — e.g. a column being re-typed from numeric to string. The equivalence-class approach keeps that signal while accommodating known-benign variation.
-
-**Operational cleanup:** The schema reference file at `data/state/constraint-costs-schema.json` was frozen from the first resource fetched (2017-18) during the failed run, capturing the minority `timestamp` typing. The file must be deleted before the next scraper run so it is re-frozen against any of the 10 resources — the equivalence rule means whichever one freezes first no longer matters.
-
-#### Implications
-
-- `ADR-002` decision 7's text continues to read "validates the field schema against a frozen reference on every fetch." This remains accurate; the equivalence rule is a refinement of *what counts as a match*, not a removal of validation.
-- The schema reference file format is unchanged.
-- The cross-FY consistency alternative (Option C in the 5 May 2026 chat) was considered and not adopted; revisit at week 10 review if the equivalence-table approach is found insufficient.
-
-### Items deferred
-
-- No additional equivalence classes are added pre-emptively. The current table contains only the one observed case. If further per-resource type variation appears, each addition will be a discrete changelog entry with the observed evidence.
-
-### Items that do NOT change
-
-- The thresholds, three-tracker architecture, opportunities rubric, and major projects tracker are all unchanged. v0.3 is a refinement to the data-acquisition validation layer only.
-- The constraint costs methodology choices in v0.2 (M-1 through M-5) are unchanged.
+See v0.4 M-7 for the replacement rule. See `neso-feedback.md` F-1 for the underlying NESO data quality observation.
 
 ### Review trigger for v0.3
 
-Re-examined at week 10 ship/shelve decision alongside the rest of the rubric and `ADR-002`. Specific questions:
+Subsumed into v0.4 review trigger.
 
-- Did the equivalence table need extending during the build? If so, what was added?
-- Did the equivalence rule ever cause a real schema breakage to slip through (false negative)?
-- Did `ADR-002` decision 7's text need updating to reference the equivalence rule explicitly?
+---
+
+## v0.4 — 5 May 2026 — Validation rule rewritten: value-shape, not CKAN type
+
+**Trigger:** Second production run of the constraint costs scraper (5 May 2026, after the v0.3 equivalence rule was in place) failed validation against the 2025-26 resource. CKAN reports `Thermal constraints cost` as type `text` for that resource; for all other FYs it reports `numeric`. Diagnostic against the actual values showed 364 of 364 values are string-encoded but parse cleanly as float. The data is operationally numeric; only NESO's metadata disagrees.
+
+This is the second case in 24 hours where CKAN's `type` field has changed without the underlying values changing shape. v0.3 (M-6) added a single equivalence class to handle `date` ↔ `timestamp`. Adding a second equivalence class for `numeric` ↔ `text` would be defensible but treats the symptom rather than the cause: CKAN's per-resource type metadata is not a reliable signal in this dataset. v0.4 supersedes M-6 with a value-shape rule that validates what the data actually looks like, not what CKAN says it is.
+
+This is the **third** revision to the validation logic in two days. We resist a fourth: if a value-shape rule fails on a future fetch, the next response is to investigate the values themselves, not to relax the rule again.
+
+### Changes
+
+#### M-7. Value-shape validation supersedes type-equivalence
+
+The schema validation rule is rewritten. CKAN's `type` field is no longer the source of truth for validation; values are.
+
+The frozen schema reference now stores, per column:
+
+- `id` — column name (unchanged).
+- `unit` — from CKAN field `info.unit` (unchanged).
+- `value_class` — one of `numeric`, `date`, `integer`, `text`. Inferred from observed values on first freeze (see M-9).
+- `ckan_type` — recorded for audit but not used for validation.
+
+The validation rule on every subsequent fetch is:
+
+| `value_class` | Rule for each non-null value |
+|---|---|
+| `numeric` | Value is either a JSON number, or a string that `float(v)` parses without raising. |
+| `integer` | Value is either a JSON integer, or a string that `int(v)` parses without raising. |
+| `date` | Value matches `YYYY-MM-DD` (regex `^\d{4}-\d{2}-\d{2}$`). |
+| `text` | No content check; any value passes. |
+
+Drift signals (these still hard-fail):
+
+- A column added, removed, or renamed.
+- A column's `unit` changing.
+- A column's `value_class` changing.
+- A value failing its `value_class` rule.
+
+What is **not** drift any more (these now pass):
+
+- CKAN `type` changing within or across `value_class` (e.g. `numeric` ↔ `text`, `date` ↔ `timestamp`).
+- Records appearing as strings rather than JSON-typed numbers, as long as they're parseable.
+
+#### M-8. M-6 (type equivalence rule) is superseded
+
+The TYPE_EQUIVALENCE table introduced in v0.3 M-6 is removed from the scraper. The `date` ≈ `timestamp` case it handled is now covered by `value_class = date` accepting either CKAN typing transparently.
+
+M-6 is left in this changelog as historical record. It is not in force.
+
+#### M-9. value_class inference rules
+
+On first freeze, `value_class` is inferred from the observed values in the first fetched resource:
+
+1. If every non-null value is a JSON integer, or every non-null value is a string that `int(v)` parses without raising → `integer`.
+2. Else if every non-null value is a JSON number, or every non-null value is a string that `float(v)` parses without raising → `numeric`.
+3. Else if every non-null value matches `^\d{4}-\d{2}-\d{2}$` → `date`.
+4. Else → `text`.
+
+Order matters: `integer` is tested before `numeric` because every int is float-parseable. The inference is deliberately conservative — if a column is mixed or ambiguous, it falls through to `text` and validation becomes a no-op for that column.
+
+**Known limitation:** if the first resource fetched happens to have an entirely-integer-valued column (e.g. all zeros, or all whole-pound costs), the column gets typed as `integer` and a later fractional value would fail validation. The fix is a manual re-freeze, deliberate not automatic. We do not silently widen.
+
+#### M-10. Missing day in 2025-26 resource — flagged as data caveat
+
+The 2025-26 resource returns 364 records where a non-leap UK financial year has 365. The other closed FYs (2017-18 through 2024-25) all returned the expected count (365, or 366 for the leap years 2019-20 and 2023-24). The specific missing day has not been identified.
+
+This is logged in `neso-feedback.md` entry F-3 with the request for NESO to either publish zero-valued rows or document when rows are omitted.
+
+**Implication for the card:** when the 2025-26 FY becomes the headline window (per v0.2 M-5), the card displays the headline figure but appends a data caveat noting that the source returned 364 rows for the FY, not 365, and links to F-3 for context. Caveat copy to be drafted alongside the card explainer.
+
+#### M-11. NESO feedback log introduced
+
+`neso-feedback.md` added to the project. A running record of friction, ambiguities, and improvement requests observed while building against NESO sources. Seeded with three entries from week 1 discovery:
+
+- F-1: inconsistent CKAN `type` across FY resources (the trigger for v0.3 and v0.4).
+- F-2: undocumented sign convention on volume columns (from v0.2 M-4).
+- F-3: missing day in 2025-26 (above).
+
+Entries are dated, scoped to a dataset, and not deleted when resolved (marked resolved instead). The audit trail is the point.
+
+### Implications
+
+- `ADR-002` decision 7 text still reads "validates the field schema against a frozen reference on every fetch." Accurate; the rule is refined, not removed. Worth updating ADR-002 prose at the v1 ship review to reference value-shape validation explicitly. Not in scope for POC build.
+- Schema reference file format changes (new fields: `value_class`, `ckan_type`; same overall structure). Existing schema file at `data/state/constraint-costs-schema.json` is now obsolete and must be deleted before the next run so it freezes against the new format. This is the second forced deletion in two days; both expected, both cheap.
+- The TYPE_EQUIVALENCE constant is removed from `scrape.py`. The methodology source of truth for what counts as drift is this v0.4 entry.
+
+### Items deferred
+
+- Value-shape inference is hard-coded to the four classes above. If a future column needs a different shape (e.g. boolean, enum, currency-prefixed string) we add a new value_class with a changelog entry.
+- ADR-002 prose update to reference v0.4. Defer to ship review.
+
+### Items that do NOT change
+
+- Thresholds, three-tracker architecture, opportunities rubric, major projects tracker — all unchanged.
+- Constraint costs methodology choices in v0.2 (M-1 through M-5) — unchanged.
+- The headline window definition (latest complete UK FY; v0.2 M-5) — unchanged. The missing day in 2025-26 is flagged as a caveat on the card, not as a reason to change the window.
+
+### Review trigger for v0.4
+
+Re-examined at week 10 ship/shelve decision. Specific questions:
+
+- Did the value-shape rule hold across all sources added during the POC, or did we need a v0.5?
+- Did the missing-day caveat on the card cause reader confusion?
+- Did any of the NESO feedback entries (F-1, F-2, F-3) get resolved by NESO during the build?
