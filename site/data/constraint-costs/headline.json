@@ -1,0 +1,18 @@
+{
+  "fy_label": "2025-2026",
+  "thermal_cost_gbp": 1956049751.0,
+  "thermal_cost_gbp_formatted": "\u00a31.96bn",
+  "row_count": 364,
+  "expected_row_count": 365,
+  "first_date": "2025-04-01",
+  "data_through": "2026-03-31",
+  "generated_on": "2026-05-19",
+  "source_url": "https://www.neso.energy/data-portal/constraint-breakdown-costs-and-volume",
+  "source_column": "Thermal constraints cost",
+  "scoring": null,
+  "card_type": "context",
+  "caveats": [
+    "Source returned 364 rows for FY 2025-2026, not the expected 365. One or more days may be missing from the NESO dataset (see neso-feedback F-3). The headline figure is a sum of 364 days only."
+  ],
+  "methodology_ref": "methodology-changelog.md v0.2 M-1, M-2, M-5; v0.4 M-10"
+}
