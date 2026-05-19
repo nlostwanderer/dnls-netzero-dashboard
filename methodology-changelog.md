@@ -76,11 +76,60 @@ The following items were touched on during the 4 May 2026 session but are not ye
 - The three-tracker architecture (`ADR-001` decision 4) is unchanged. Context cards live within the infrastructure tracker, distinguished visually but not architecturally.
 - The opportunities and major projects rubrics are unchanged.
 
-### Review trigger for v0.2
+---
 
-Re-examined at week 10 ship/shelve decision alongside the rest of the rubric. Specific questions:
+## v0.3 — 5 May 2026 — Schema validation: type equivalence rule
 
-- Did the context-card pattern actually look distinct enough from scored cards to readers, or did the visual separation fail?
-- Did the explainer copy hold the editorial line on thermal-cost ≠ curtailment-payments, or did it drift?
-- Did the held-back columns (volumes, non-headline costs) generate reader friction?
-- Did anyone find documentation of the volume sign convention during the build, and if so what does the methodology say about it now?
+**Trigger:** First production run of the constraint costs scraper (5 May 2026) failed validation against the 2019-20 resource. Root cause was not a real schema breakage but per-resource variation in CKAN's `type` metadata: the 2017-18 and 2018-19 resources type the `Date` column as `timestamp`, while 2019-20 onwards type it as `date`. Same column, same unit, same value shape. The original validation rule in `ADR-002` decision 7 treated this as drift and hard-failed; this entry refines the definition of drift.
+
+### Changes
+
+#### M-6. CKAN type equivalence rule
+
+The schema validation rule introduced in `ADR-002` decision 7 is refined as follows. Two field types are treated as **equivalent** for validation purposes if they are documented in the equivalence table below. Any drift between equivalent types is not flagged.
+
+Initial equivalence table:
+
+| Class | Equivalent CKAN types |
+|-------|----------------------|
+| Date-like | `date`, `timestamp` |
+
+Additions to this table require a methodology changelog entry. The equivalence table lives in the scraper source (`data/scrapers/scrape.py`, `TYPE_EQUIVALENCE` constant) and is referenced from this changelog as the methodology source of truth.
+
+**What still counts as drift (unchanged):**
+
+- A column being added, removed, or renamed.
+- A column's `unit` changing.
+- A column's `type` changing to one outside its current equivalence class (e.g. `numeric` → `text`).
+- A change in the number of fields.
+
+**Reasoning:**
+
+- The discovery work supporting `ADR-002` sampled only two FY resources (2024-25 and 2026-27). Both happened to use `date` for the Date column. The variation in older resources was not visible at the time the validation rule was written.
+- The values returned in the records are JSON-typed (string for both `date` and `timestamp` cases, parsed by downstream code), so there is no operational impact from the type variation. Treating it as drift would block the scraper without a real underlying problem.
+- Throwing the type check away entirely (which was the alternative considered) would lose the ability to catch genuine type changes — e.g. a column being re-typed from numeric to string. The equivalence-class approach keeps that signal while accommodating known-benign variation.
+
+**Operational cleanup:** The schema reference file at `data/state/constraint-costs-schema.json` was frozen from the first resource fetched (2017-18) during the failed run, capturing the minority `timestamp` typing. The file must be deleted before the next scraper run so it is re-frozen against any of the 10 resources — the equivalence rule means whichever one freezes first no longer matters.
+
+#### Implications
+
+- `ADR-002` decision 7's text continues to read "validates the field schema against a frozen reference on every fetch." This remains accurate; the equivalence rule is a refinement of *what counts as a match*, not a removal of validation.
+- The schema reference file format is unchanged.
+- The cross-FY consistency alternative (Option C in the 5 May 2026 chat) was considered and not adopted; revisit at week 10 review if the equivalence-table approach is found insufficient.
+
+### Items deferred
+
+- No additional equivalence classes are added pre-emptively. The current table contains only the one observed case. If further per-resource type variation appears, each addition will be a discrete changelog entry with the observed evidence.
+
+### Items that do NOT change
+
+- The thresholds, three-tracker architecture, opportunities rubric, and major projects tracker are all unchanged. v0.3 is a refinement to the data-acquisition validation layer only.
+- The constraint costs methodology choices in v0.2 (M-1 through M-5) are unchanged.
+
+### Review trigger for v0.3
+
+Re-examined at week 10 ship/shelve decision alongside the rest of the rubric and `ADR-002`. Specific questions:
+
+- Did the equivalence table need extending during the build? If so, what was added?
+- Did the equivalence rule ever cause a real schema breakage to slip through (false negative)?
+- Did `ADR-002` decision 7's text need updating to reference the equivalence rule explicitly?
