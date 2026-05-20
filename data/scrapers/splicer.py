@@ -111,6 +111,42 @@ def cast_thermal(value, row_index: int) -> float:
 
 
 # ---------------------------------------------------------------------------
+# FY totals (sparkline data)
+# ---------------------------------------------------------------------------
+
+def build_fy_totals(records: list[dict], complete_fys: list[str]) -> list[dict]:
+    """Sum thermal cost per complete FY, in chronological order.
+
+    Returns a list of dicts: [{"fy": "2017-2018", "total": 412000000.0, "row_count": 365}, ...]
+
+    List preserves order (chronological) so the sparkline can iterate without sorting.
+    Only complete FYs are included — in-progress FY is excluded.
+    Same cast logic as the headline sum: handles string and numeric values.
+    """
+    # Group records by FY label first (one pass)
+    by_fy: dict[str, list[dict]] = {fy: [] for fy in complete_fys}
+    for r in records:
+        label = r.get("_fy_label")
+        if label in by_fy:
+            by_fy[label].append(r)
+
+    totals = []
+    for fy in complete_fys:  # already sorted chronologically
+        fy_records = by_fy[fy]
+        row_total = 0.0
+        for i, r in enumerate(fy_records):
+            row_total += cast_thermal(r.get(THERMAL_COL), i)
+        totals.append({
+            "fy": fy,
+            "total": row_total,
+            "row_count": len(fy_records),
+        })
+        print(f"[splicer] fy_totals: {fy}  £{row_total:,.0f}  ({len(fy_records)} rows)")
+
+    return totals
+
+
+# ---------------------------------------------------------------------------
 # Delta logging
 # ---------------------------------------------------------------------------
 
@@ -229,6 +265,10 @@ def main() -> int:
     first_date = dates[0]
     print(f"[splicer] date range: {first_date} → {data_through}")
 
+    # --- FY totals for sparkline ---
+    print(f"[splicer] building fy_totals for {len(complete_fys)} complete FYs...")
+    fy_totals = build_fy_totals(records, complete_fys)
+
     # --- Delta check against previous run ---
     log_delta(args.output_path, total, headline_fy)
 
@@ -247,6 +287,7 @@ def main() -> int:
         "scoring": None,
         "card_type": "context",
         "caveats": caveats,
+        "fy_totals": fy_totals,
         "methodology_ref": "methodology-changelog.md v0.2 M-1, M-2, M-5; v0.4 M-10",
     }
 
