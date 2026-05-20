@@ -1,0 +1,616 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Methodology — UK Net Zero Tracker"
+  description="How the UK Net Zero Tracker scores progress, sources its data, and handles uncertainty."
+>
+  <div class="meth-page">
+
+    <div class="page-intro">
+      <p class="page-label">Methodology</p>
+      <h1 class="page-heading">How this works</h1>
+      <p class="page-sub">
+        Every figure on this dashboard has a source, a refresh cadence, and a
+        written rationale for how it's scored — or a written rationale for why
+        it isn't scored. This page explains all of that. It's written to be
+        readable without a background in energy policy, but it doesn't
+        oversimplify for readers who do have one.
+      </p>
+    </div>
+
+    <nav class="meth-nav" aria-label="Methodology sections">
+      <a href="#how-we-score">How we score</a>
+      <a href="#card-types">Card types</a>
+      <a href="#constraint-costs">Grid constraint costs</a>
+      <a href="#versioning">Versioning</a>
+    </nav>
+
+    <section class="meth-section" id="how-we-score">
+      <h2 class="section-heading">How we score infrastructure metrics</h2>
+
+      <p>
+        For each infrastructure metric, the dashboard asks one question: <em>at the current build rate, will we hit the 2030 target?</em>
+      </p>
+
+      <p>
+        We don't score absolute capacity, and we don't score year-on-year
+        change. We score the projected outcome at the deadline against the
+        committed target for that deadline.
+      </p>
+
+      <h3 class="sub-heading">The method: gap-closure projection</h3>
+
+      <p>For each metric:</p>
+
+      <ol class="meth-list">
+        <li>Take the trailing 12 months of additions to operational capacity — not consented, not under construction, only what's actually running.</li>
+        <li>Take the gap between current operational capacity and the 2030 target.</li>
+        <li>Take the years remaining until end of 2030.</li>
+        <li>Project: <code>current capacity + (trailing 12-month rate × years remaining)</code>.</li>
+        <li>Score: <code>projected 2030 capacity ÷ 2030 target = delivery ratio</code>.</li>
+      </ol>
+
+      <p>The delivery ratio determines the traffic light.</p>
+
+      <div class="threshold-table-wrap">
+        <table class="threshold-table">
+          <thead>
+            <tr>
+              <th>Signal</th>
+              <th>Delivery ratio</th>
+              <th>What it means</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="signal green" aria-label="Green">●</span></td>
+              <td>≥ 100%</td>
+              <td>At current pace, target is met or exceeded.</td>
+            </tr>
+            <tr>
+              <td><span class="signal amber" aria-label="Amber">●</span></td>
+              <td>60% – &lt;100%</td>
+              <td>Target is missed but significant progress is made.</td>
+            </tr>
+            <tr>
+              <td><span class="signal red" aria-label="Red">●</span></td>
+              <td>&lt; 60%</td>
+              <td>Target is missed badly. Recovery requires a step-change in build rate.</td>
+            </tr>
+            <tr>
+              <td><span class="signal grey" aria-label="Grey">●</span></td>
+              <td>n/a</td>
+              <td>Insufficient or disputed data. See the card for details.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-heading">Why these thresholds</h3>
+
+      <p>
+        Green requires being on or ahead of pace — not close. These are
+        large, long-lead infrastructure programmes. A 5% projected shortfall
+        in mid-build is narrowly missing, not on track.
+      </p>
+
+      <p>
+        Below 60%, catch-up requires more than doubling current build rate
+        for the remaining years. That's not impossible, but it requires an
+        external intervention — policy change, supply chain shift, or a
+        significant injection of capital. Trend continuation won't get there.
+        That's what red means.
+      </p>
+
+      <h3 class="sub-heading">What this method doesn't do</h3>
+
+      <p>
+        Linear extrapolation is a simplification. Build rates do accelerate
+        as supply chains mature, so early-years lag against a linear
+        projection isn't necessarily fatal. We use linear because it's the
+        most transparent and defensible approach — anything more complex
+        requires assumptions about future acceleration that are hard to
+        justify without a forecasting model. We don't build forecasting
+        models.
+      </p>
+
+      <p>
+        Each scored card shows the underlying numbers alongside the traffic
+        light. The signal is a starting point, not the whole story.
+      </p>
+    </section>
+
+    <section class="meth-section" id="card-types">
+      <h2 class="section-heading">Card types</h2>
+
+      <p>Not everything on this dashboard can be scored against a 2030 target. There are three card types:</p>
+
+      <div class="card-type-grid">
+        <div class="card-type-item">
+          <div class="card-type-badge scored">
+            <span class="badge-dot"></span>
+            Scored metric
+          </div>
+          <p>Infrastructure capacity measured against a 2030 target using gap-closure projection. Shows a traffic light, a delivery ratio, and a slip year. Battery storage, offshore wind, onshore wind, and solar will be scored metrics when added.</p>
+        </div>
+
+        <div class="card-type-item">
+          <div class="card-type-badge context">
+            <span class="badge-dot"></span>
+            Context — no score
+          </div>
+          <p>A figure that provides useful context but has no government 2030 target to score against. Shows the figure, a historical sparkline, and an explainer. Grid constraint costs is a context card — there's no target for what this number should be, so assigning a traffic light would invent one.</p>
+        </div>
+
+        <div class="card-type-item">
+          <div class="card-type-badge policy">
+            <span class="badge-dot"></span>
+            Policy status
+          </div>
+          <p>Policy proposals tracked by their regulatory status, not by a numerical target. Uses a different scoring rubric: implemented, consultation open, no active policy, or disputed. REMA / zonal pricing will be tracked this way.</p>
+        </div>
+      </div>
+
+      <p class="note">
+        These three types use different evidence and different logic. They're
+        presented separately and clearly labelled so you don't aggregate across
+        them — an amber on battery storage (a measured shortfall against a
+        numerical target) means something very different from an amber on
+        zonal pricing (a qualitative status of an active consultation).
+      </p>
+    </section>
+
+    <section class="meth-section" id="constraint-costs">
+      <h2 class="section-heading">Grid constraint costs</h2>
+
+      <div class="metric-meta">
+        <span class="meta-pill">Context card — no score</span>
+        <span class="meta-pill">Source: NESO</span>
+        <span class="meta-pill">Refreshes: monthly</span>
+        <span class="meta-pill">Methodology: v0.2</span>
+      </div>
+
+      <h3 class="sub-heading">What this figure is</h3>
+
+      <p>
+        The card shows the total thermal constraint cost for the most recent
+        complete UK financial year (April to March). As of May 2026, that is
+        FY 2025–26: <strong>£1.96bn</strong>.
+      </p>
+
+      <p>
+        Thermal constraint cost is the system cost of managing capacity limits
+        on the transmission network. When there's more generation in one part
+        of the country than the wires can carry, the system operator has to
+        intervene: it pays some generators to reduce output, and simultaneously
+        pays alternative generators elsewhere to increase output to compensate.
+        The figure is the net cost of both sides of that transaction across a
+        full year.
+      </p>
+
+      <p>
+        It goes up when the grid is more congested. Congestion is directly tied
+        to how fast transmission infrastructure is being built — which is why
+        it's on this dashboard. For a plain English explanation of how
+        constraint payments work, <a href="https://www.neso.energy/energy-101/electricity-explained/how-do-we-balance-grid/what-are-constraints-payments" target="_blank" rel="noopener noreferrer">NESO's own explainer is the best starting point ↗</a>.
+      </p>
+
+      <h3 class="sub-heading">Why no traffic light</h3>
+
+      <p>
+        There's no government target for what this figure should be. Assigning
+        a traffic light without a target would require us to invent one — which
+        would be editorial, not measurement. The card shows the figure and its
+        history so you can draw your own conclusions about the trend.
+      </p>
+
+      <h3 class="sub-heading">What's included in the figure</h3>
+
+      <p>
+        The NESO dataset contains four cost categories. This card publishes
+        thermal constraint cost only. The other three categories are:
+      </p>
+
+      <ul class="meth-list">
+        <li><strong>Voltage constraints cost</strong> — cost of managing voltage stability on the network. A different system problem from thermal limits.</li>
+        <li><strong>Reducing largest loss cost</strong> — cost of actions taken to limit the impact of a sudden large generation loss. Zero across all current data.</li>
+        <li><strong>Increasing system inertia cost</strong> — cost of maintaining frequency stability as more inverter-based generation comes online. Also zero across all current data.</li>
+      </ul>
+
+      <p>
+        Thermal constraint cost is published because it's the category most
+        directly tied to transmission bottlenecks and grid build-out. The other
+        categories are fetched and stored but not displayed — they'll be added
+        if the dashboard's scope expands to cover system balancing more broadly.
+      </p>
+
+      <h3 class="sub-heading">Time window</h3>
+
+      <p>
+        The headline figure is the sum over the most recent complete UK
+        financial year. "Complete" means the year has fully closed — we don't
+        publish a partial-year figure because it would be misleading to compare
+        it against prior full years on the sparkline. Each April, the headline
+        rolls forward to the just-closed year.
+      </p>
+
+      <h3 class="sub-heading">Data source and refresh</h3>
+
+      <p>
+        Source: <a href="https://www.neso.energy/data-portal/constraint-breakdown" target="_blank" rel="noopener noreferrer">NESO Constraint Breakdown Costs and Volume ↗</a>.
+        The dataset is published by the National Energy System Operator and
+        updated monthly. We fetch it via NESO's open data API and validate the
+        schema on every fetch — if the data shape changes unexpectedly, we
+        preserve the last good data and flag the failure rather than
+        silently publishing broken figures.
+      </p>
+
+      <h3 class="sub-heading">Known data caveat</h3>
+
+      <div class="caveat-block">
+        <span class="caveat-icon" aria-hidden="true">⚠</span>
+        <p>
+          The NESO source returned 364 rows for FY 2025–26, not the expected
+          365. One day appears to be missing from the dataset. The headline
+          figure is a sum of 364 days. We've logged this with NESO — it
+          doesn't change the figure materially but it's disclosed here for
+          transparency.
+        </p>
+      </div>
+
+      <h3 class="sub-heading">The 2022–23 spike</h3>
+
+      <p>
+        The sparkline shows a significant spike in FY 2022–23 (£1.50bn
+        thermal constraint cost). This attracted press coverage at the time.
+        Figures cited in that coverage were typically higher than what appears
+        here because they aggregated all four cost categories, not thermal
+        only. The spike is real; the scale depends on which categories you
+        include.
+      </p>
+    </section>
+
+    <section class="meth-section" id="versioning">
+      <h2 class="section-heading">Versioning and transparency</h2>
+
+      <p>
+        The methodology is versioned in the same git repository as the code
+        and data. Every change to what gets shown, what gets scored, or how a
+        metric is sourced gets a dated entry in the methodology changelog.
+        The dashboard footer shows the active methodology version.
+      </p>
+
+      <p>
+        Current version: <strong>v0.4</strong>. The full changelog is in
+        the repository at <a href="https://github.com/nlostwanderer/dnls-netzero-dashboard/blob/main/methodology-changelog.md" target="_blank" rel="noopener noreferrer">methodology-changelog.md ↗</a>.
+      </p>
+
+      <p>
+        If you spot an error, a disputed figure, or a source that's gone
+        stale, the best route is a
+        <a href="https://github.com/nlostwanderer/dnls-netzero-dashboard/issues" target="_blank" rel="noopener noreferrer">GitHub issue ↗</a>.
+        We'd rather be corrected publicly than wrong quietly.
+      </p>
+    </section>
+
+  </div>
+</BaseLayout>
+
+<style>
+  .meth-page {
+    padding-bottom: 4rem;
+  }
+
+  .page-intro {
+    margin-bottom: 3rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-green);
+    margin-bottom: 0.75rem;
+  }
+
+  .page-heading {
+    font-family: var(--font-display);
+    font-size: 42px;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+
+  .page-sub {
+    font-family: var(--font-ui);
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    max-width: 640px;
+  }
+
+  /* In-page nav */
+  .meth-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  .meth-nav a {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .meth-nav a:hover { color: var(--accent-green); }
+
+  /* Sections */
+  .meth-section {
+    margin-bottom: 4rem;
+    padding-bottom: 4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .meth-section:last-child {
+    border-bottom: none;
+  }
+
+  .section-heading {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+  }
+
+  .sub-heading {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin: 2rem 0 0.75rem;
+  }
+
+  /* Prose */
+  .meth-section p {
+    font-family: var(--font-ui);
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.75;
+    max-width: 640px;
+    margin-bottom: 1rem;
+  }
+
+  .meth-section p strong {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .meth-section p a,
+  .note a {
+    color: var(--accent-green);
+    text-decoration: none;
+  }
+
+  .meth-section p a:hover,
+  .note a:hover {
+    text-decoration: underline;
+  }
+
+  .meth-section em {
+    font-style: italic;
+    color: var(--text-primary);
+  }
+
+  /* Lists */
+  .meth-list {
+    font-family: var(--font-ui);
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.75;
+    max-width: 620px;
+    margin: 0 0 1rem 1.25rem;
+  }
+
+  .meth-list li {
+    margin-bottom: 0.5rem;
+  }
+
+  .meth-list li strong {
+    color: var(--text-primary);
+  }
+
+  /* Code */
+  code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    color: var(--accent-green);
+  }
+
+  /* Traffic light table */
+  .threshold-table-wrap {
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+
+  .threshold-table {
+    width: 100%;
+    max-width: 640px;
+    border-collapse: collapse;
+    font-family: var(--font-ui);
+    font-size: 14px;
+  }
+
+  .threshold-table th {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 0.5rem 1rem 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .threshold-table td {
+    padding: 0.75rem 1rem 0.75rem 0;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .threshold-table tr:last-child td { border-bottom: none; }
+
+  .signal {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .signal.green { color: #5DCAA5; }
+  .signal.amber { color: #EF9F27; }
+  .signal.red { color: #e05252; }
+  .signal.grey { color: #5b5b62; }
+
+  /* Card type grid */
+  .card-type-grid {
+    display: grid;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    max-width: 640px;
+  }
+
+  .card-type-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+
+  .card-type-item p {
+    font-size: 14px;
+    margin-bottom: 0;
+    margin-top: 0.75rem;
+  }
+
+  .card-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    padding: 3px 8px;
+  }
+
+  .card-type-badge .badge-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .card-type-badge.scored {
+    color: #5DCAA5;
+    background: rgba(93, 202, 165, 0.1);
+    border: 1px solid rgba(93, 202, 165, 0.25);
+  }
+
+  .card-type-badge.scored .badge-dot { background: #5DCAA5; }
+
+  .card-type-badge.context {
+    color: #EF9F27;
+    background: rgba(239, 159, 39, 0.1);
+    border: 1px solid rgba(239, 159, 39, 0.25);
+  }
+
+  .card-type-badge.context .badge-dot { background: #EF9F27; }
+
+  .card-type-badge.policy {
+    color: #9b9b9b;
+    background: rgba(155, 155, 155, 0.1);
+    border: 1px solid rgba(155, 155, 155, 0.2);
+  }
+
+  .card-type-badge.policy .badge-dot { background: #9b9b9b; }
+
+  .note {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    max-width: 640px;
+    border-left: 2px solid var(--border);
+    padding-left: 1rem;
+    margin-top: 1rem;
+  }
+
+  /* Metric meta pills */
+  .metric-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .meta-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+  }
+
+  /* Caveat block */
+  .caveat-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(186, 117, 23, 0.07);
+    border: 1px solid rgba(186, 117, 23, 0.2);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    max-width: 640px;
+  }
+
+  .caveat-icon {
+    font-size: 14px;
+    color: #ba7517;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .caveat-block p {
+    font-size: 13px;
+    color: #7a6a45;
+    margin: 0;
+    line-height: 1.6;
+  }
+</style>

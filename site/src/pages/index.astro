@@ -2,164 +2,30 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import ConstraintCostsCard from "../components/ConstraintCostsCard.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
 
 const dataPath = join(process.cwd(), "data/constraint-costs/headline.json");
 const headline = JSON.parse(readFileSync(dataPath, "utf-8"));
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="generator" content={Astro.generator} />
-    <title>UK Net Zero Tracker</title>
-    <meta name="description" content="A transparent status tracker for UK net zero infrastructure delivery, scored against published targets." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div class="layout">
-      <header class="site-header">
-        <div class="header-inner">
-          <div class="site-identity">
-            <span class="site-dot" aria-hidden="true"></span>
-            <span class="site-title">UK Net Zero Tracker</span>
-          </div>
-          <nav class="site-nav">
-            <a href="/methodology">Methodology</a>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer">Source</a>
-          </nav>
-        </div>
-      </header>
+<BaseLayout>
+  <div class="page-intro">
+    <h1 class="page-heading">Infrastructure tracker</h1>
+    <p class="page-sub">
+      Progress against UK 2030 targets, scored at current build rates.
+      Data refreshes monthly. <a href="/methodology">Methodology ↗</a>
+    </p>
+  </div>
 
-      <main class="main-content">
-        <div class="page-intro">
-          <h1 class="page-heading">Infrastructure tracker</h1>
-          <p class="page-sub">Progress against UK 2030 targets, scored at current build rates. Data refreshes monthly. <a href="/methodology">Methodology ↗</a></p>
-        </div>
-
-        <section class="tracker-section" aria-labelledby="context-heading">
-          <h2 class="section-label" id="context-heading">Context metrics</h2>
-          <div class="card-grid">
-            <ConstraintCostsCard data={headline} />
-          </div>
-        </section>
-      </main>
-
-      <footer class="site-footer">
-        <p class="footer-text">
-          Data from public sources. Methodology v0.2. Not affiliated with NESO, DESNZ, or any government body.
-          <a href="/methodology">Read the methodology ↗</a>
-        </p>
-      </footer>
+  <section class="tracker-section" aria-labelledby="context-heading">
+    <h2 class="section-label" id="context-heading">Context metrics</h2>
+    <div class="card-grid">
+      <ConstraintCostsCard data={headline} />
     </div>
-  </body>
-</html>
-
-<style is:global>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg: #0e0e10;
-    --bg-surface: #18181b;
-    --border: #2a2a2e;
-    --text-primary: #e8e8ea;
-    --text-secondary: #9b9b9b;
-    --text-muted: #5b5b62;
-    --accent-green: #5DCAA5;
-    --font-display: "EB Garamond", Georgia, serif;
-    --font-ui: "Syne", sans-serif;
-    --font-mono: "DM Mono", monospace;
-  }
-
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f4f3ef;
-      --bg-surface: #ffffff;
-      --border: #ddddd8;
-      --text-primary: #1a1a1c;
-      --text-secondary: #5b5b62;
-      --text-muted: #9b9b9b;
-    }
-  }
-
-  html {
-    font-size: 16px;
-    -webkit-text-size-adjust: 100%;
-  }
-
-  body {
-    font-family: var(--font-ui);
-    background: var(--bg);
-    color: var(--text-primary);
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-    line-height: 1.6;
-    overflow-x: hidden;
-  }
-</style>
+  </section>
+</BaseLayout>
 
 <style>
-  .layout {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 1.5rem;
-  }
-
-  .site-header {
-    padding: 1.5rem 0;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 2.5rem;
-  }
-
-  .header-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .site-identity {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .site-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--accent-green);
-    flex-shrink: 0;
-  }
-
-  .site-title {
-    font-family: var(--font-ui);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    line-height: 1.4;
-  }
-
-  .site-nav {
-    display: flex;
-    gap: 1.5rem;
-  }
-
-  .site-nav a {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    text-decoration: none;
-    text-transform: uppercase;
-    line-height: 1.4;
-  }
-
-  .site-nav a:hover { color: var(--accent-green); }
-
   .page-intro {
     margin-bottom: 2.5rem;
   }
@@ -180,8 +46,6 @@ const headline = JSON.parse(readFileSync(dataPath, "utf-8"));
     font-size: 15px;
     color: var(--text-secondary);
     line-height: 1.7;
-    overflow: visible;
-    padding-bottom: 2px;
   }
 
   .page-sub a {
@@ -206,22 +70,5 @@ const headline = JSON.parse(readFileSync(dataPath, "utf-8"));
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1rem;
-  }
-
-  .site-footer {
-    border-top: 1px solid var(--border);
-    padding: 1.5rem 0 3rem;
-  }
-
-  .footer-text {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-muted);
-    line-height: 1.8;
-  }
-
-  .footer-text a {
-    color: var(--accent-green);
-    text-decoration: none;
   }
 </style>
