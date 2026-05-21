@@ -73,6 +73,8 @@ const lastY = toY(sparkData[sparkData.length - 1].value);
   </div>
   <p class="fy-label">FY {fyDisplay} · data through {dataThrough}</p>
 
+  <p class="explainer">When the grid can't carry all the electricity being generated in a region, the system operator pays some generators to reduce output and others to pick up the slack elsewhere. This figure is the total cost of those interventions across the financial year — it rises when transmission capacity lags behind generation build-out.</p>
+
   <div class="sparkline-area">
     <p class="sparkline-label">Annual total · FY 2017–18 to 2025–26</p>
     <svg
@@ -194,6 +196,12 @@ const lastY = toY(sparkData[sparkData.length - 1].value);
     font-size: 12px;
     color: #5b5b62;
     margin: 0 0 1.75rem;
+  }
+  .explainer {
+  font-size: 13px;
+  color: #6b6b72;
+  line-height: 1.65;
+  margin: 0 0 1.75rem;
   }
   .sparkline-area { margin-bottom: 1.5rem; }
   .sparkline-label {
