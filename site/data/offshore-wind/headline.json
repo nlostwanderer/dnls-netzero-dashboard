@@ -1,0 +1,190 @@
+{
+  "metric": "offshore-wind",
+  "card_type": "scored",
+  "as_of": "2026-03-31",
+  "anchor_note": "Clean quarter-end (REPD Q1 2026 = data through 31 Mar 2026); fixed, not derived from row dates. Matches constraint-costs FY-boundary logic.",
+  "source": "REPD Q1 2026",
+  "source_url": "https://www.gov.uk/government/publications/renewable-energy-planning-database-quarterly-extract",
+  "operational_gw": 15.13,
+  "trailing_12m_gw": 0.45,
+  "single_project_sensitivity": true,
+  "projected_2030_gw": 17.27,
+  "years_remaining": 4.753,
+  "target": {
+    "low": 43.0,
+    "high": 50.0,
+    "unit": "GW",
+    "source": "Clean Power 2030 Action Plan (DESNZ, Dec 2024), p10 & p74: '43-50 GW of offshore wind ... in 2030'; range restated in DESNZ CfD reform consultation, 21 Feb 2025.",
+    "retrieved": "2026-06-08"
+  },
+  "delivery_ratio": {
+    "low": 0.402,
+    "high": 0.345
+  },
+  "traffic_light": "red",
+  "slip_year": {
+    "low": 2088,
+    "high": 2103
+  },
+  "pipeline_gw": {
+    "operational": 15.13,
+    "under_construction": 8.69,
+    "awaiting_construction": 29.98
+  },
+  "quarterly_additions": [
+    {
+      "q": "2000-Q4",
+      "gw": 0.004
+    },
+    {
+      "q": "2003-Q4",
+      "gw": 0.06
+    },
+    {
+      "q": "2004-Q1",
+      "gw": 0.06
+    },
+    {
+      "q": "2005-Q3",
+      "gw": 0.09
+    },
+    {
+      "q": "2006-Q2",
+      "gw": 0.09
+    },
+    {
+      "q": "2007-Q3",
+      "gw": 0.01
+    },
+    {
+      "q": "2007-Q4",
+      "gw": 0.09
+    },
+    {
+      "q": "2008-Q1",
+      "gw": 0.097
+    },
+    {
+      "q": "2008-Q2",
+      "gw": 0.097
+    },
+    {
+      "q": "2009-Q3",
+      "gw": 0.263
+    },
+    {
+      "q": "2009-Q4",
+      "gw": 0.09
+    },
+    {
+      "q": "2010-Q2",
+      "gw": 0.084
+    },
+    {
+      "q": "2010-Q3",
+      "gw": 0.3
+    },
+    {
+      "q": "2011-Q2",
+      "gw": 0.184
+    },
+    {
+      "q": "2012-Q1",
+      "gw": 0.15
+    },
+    {
+      "q": "2012-Q2",
+      "gw": 0.184
+    },
+    {
+      "q": "2012-Q3",
+      "gw": 0.504
+    },
+    {
+      "q": "2012-Q4",
+      "gw": 0.317
+    },
+    {
+      "q": "2013-Q2",
+      "gw": 0.642
+    },
+    {
+      "q": "2013-Q3",
+      "gw": 0.332
+    },
+    {
+      "q": "2014-Q1",
+      "gw": 0.007
+    },
+    {
+      "q": "2014-Q4",
+      "gw": 0.389
+    },
+    {
+      "q": "2015-Q2",
+      "gw": 1.005
+    },
+    {
+      "q": "2015-Q3",
+      "gw": 0.05
+    },
+    {
+      "q": "2017-Q2",
+      "gw": 0.548
+    },
+    {
+      "q": "2017-Q4",
+      "gw": 0.874
+    },
+    {
+      "q": "2018-Q1",
+      "gw": 0.636
+    },
+    {
+      "q": "2018-Q3",
+      "gw": 0.756
+    },
+    {
+      "q": "2019-Q3",
+      "gw": 0.588
+    },
+    {
+      "q": "2019-Q4",
+      "gw": 1.218
+    },
+    {
+      "q": "2020-Q3",
+      "gw": 0.714
+    },
+    {
+      "q": "2021-Q4",
+      "gw": 0.05
+    },
+    {
+      "q": "2022-Q1",
+      "gw": 0.857
+    },
+    {
+      "q": "2022-Q2",
+      "gw": 0.95
+    },
+    {
+      "q": "2022-Q3",
+      "gw": 1.32
+    },
+    {
+      "q": "2023-Q4",
+      "gw": 1.075
+    },
+    {
+      "q": "2025-Q3",
+      "gw": 0.45
+    }
+  ],
+  "caveats": [
+    "Trailing 12-month additions are dominated by a single project (Neart na Gaoithe, 450 MW = 100% of the window). Offshore wind commissions in multi-GW lumps years apart; this window caught a trough. The score is correct but acutely sensitive to commissioning timing \u2014 read alongside the pipeline bar and sparkline.",
+    "REPD records multi-phase projects as single entries and can lag commissioning of completed phases. Dogger Bank A&B (2.4 GW) remains Under Construction as neither phase has reached full commercial operation (per v0.5 M-15); correctly excluded from operational.",
+    "Scored against the government's 2030 capacity RANGE (43-50 GW), not a point target. Both endpoints shown. Slip years are far beyond 2030 and carry wide uncertainty \u2014 treat as 'well past 2030 at current pace', not as precise forecasts."
+  ],
+  "methodology_ref": "rubric-v0.1 \u00a72,\u00a75; changelog v0.5 M-12..M-16; v0.6 (range scoring, quarter-end anchor)"
+}

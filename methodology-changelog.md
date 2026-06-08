@@ -212,3 +212,55 @@ Re-examined at week 10 ship/shelve decision. Specific questions:
 - Did the value-shape rule hold across all sources added during the POC, or did we need a v0.5?
 - Did the missing-day caveat on the card cause reader confusion?
 - Did any of the NESO feedback entries (F-1, F-2, F-3) get resolved by NESO during the build?
+
+v0.6 --- 8 June 2026 --- Offshore wind output: range scoring, quarter-end anchor, full-history sparkline
+----------------------------------------------------------------------------------------------------
+
+**Trigger:** Building the offshore wind splicer (first scored metric) against REPD Q1 2026 surfaced three decisions the rubric and prior changelog did not cover: the 2030 target is published as a range not a point figure; the trailing-window anchor needed fixing explicitly; and the §5 sparkline window needed a per-metric call. v0.5 (M-12 through M-16) settled the card *design* (pipeline bar, lumpiness, REPD as source); v0.6 settles the *scoring inputs and output shape*.
+
+### Changes
+
+#### M-17. Offshore wind 2030 target scored as a range (43--50 GW), not a point
+
+The offshore wind delivery ratio and slip year are computed against both ends of the government's 2030 capacity range, 43 GW and 50 GW, and both are surfaced on the card.
+
+**Reasoning:** The Clean Power 2030 Action Plan (DESNZ, December 2024) states the target as a range in two places --- p10 ("43-50 GW of offshore wind ... in 2030") and p74 ("This will need to rise to 43-50 GW in 2030"), where it is labelled the "DESNZ Clean Power Capacity Range". The DESNZ CfD reform consultation (21 February 2025) restates the same 43--50 GW range. The government has not published a point target. Scoring against a single 50 GW figure would misrepresent the source by inventing a precision the commitment does not contain; scoring against 43 alone would understate stated ambition. A range is the honest treatment.
+
+**Departure from rubric §4:** rubric-v0.1 §4 refers to "the 2030 target" in the singular and the gap-closure method in §2 assumes a single target value. v0.6 generalises this to permit a target *range* where the source publishes one. The scoring method is unchanged --- gap-closure projection is simply run twice, once per endpoint. Where a metric has a genuine point target (as constraint costs would, were it scored), the singular form still applies. This is the first metric to use a range; the generalisation is logged here rather than folded silently into §4.
+
+**Output:** `delivery_ratio` and `slip_year` are objects with `low`/`high` keys. Against Q1 2026 data: 40.2% (vs 43 GW) / 34.5% (vs 50 GW); both red. Projected 2030 capacity is target-independent (17.27 GW) and stored once.
+
+**Citation discipline:** the target source string cites CP2030 p10 & p74 directly (document verified 4 June 2026), with the CfD consultation as corroborating reference. The press release's "30.7 GW installed or committed" progress figure is explicitly NOT used --- it is pipeline-inclusive and would contradict the operational-only rule (ADR-001 d8).
+
+#### M-18. Trailing-window anchor: fixed clean quarter-end
+
+The trailing-12-month window and the "as of" date are anchored to a fixed quarter-end (REPD Q1 2026 = 31 March 2026), not derived from the maximum `Record Last Updated` value in the CSV.
+
+**Reasoning:** Matches the constraint-costs decision to anchor on a clean FY boundary (ADR-002 d2, v0.2 M-5) rather than a sliding data-currency date. Fixed anchor is reproducible and citable; a reader can verify the window. Trade-off: the figure can go stale between quarterly REPD publications --- handled by the staleness warning (v0.5 M-16, >4 months old).
+
+#### M-19. Sparkline shows full commissioning history, not trailing 2--3 years
+
+The offshore wind quarterly-additions sparkline shows the full commissioning record (37 quarters, 2000--2025), not the trailing 2--3 years specified in rubric §5.
+
+**Reasoning:** §5's purpose is to expose lumpiness the trailing-12-month figure hides. For offshore wind specifically, the lumpiness only becomes legible across the full record: the 2024 commissioning gap (zero quarters between 2023-Q4 and 2025-Q3) and the 2022 wave (3.1 GW across three quarters) are what make the current trough readable as a trough rather than a collapse. Truncating to 3 years would remove the context that justifies reading the red light as window-sensitive. This is a deliberate per-metric deviation from §5's literal window, consistent with §5's intent. Matches the full-history treatment already used on the constraint-costs sparkline (9 FYs).
+
+### Output shape (offshore wind headline.json)
+
+Scored-card shape, distinct from the constraint-costs context-card shape: adds `traffic_light`, `delivery_ratio`, `slip_year`, `projected_2030_gw`, `target`, `pipeline_gw`, `single_project_sensitivity`. `card_type` is `"scored"` (vs `"context"`).
+
+### Items that do NOT change
+
+-   Rubric thresholds (green ≥100%, amber 60--99%, red <60%) --- unchanged. Offshore wind is red at both range endpoints.
+-   Operational-only capacity definition (ADR-001 d8) --- unchanged. Scored on status == 'Operational' (15.13 GW); pipeline shown contextually only.
+-   Trailing 12-month build rate as scoring input (rubric §2) --- unchanged.
+-   Single-project sensitivity flag at >60% (rubric §5) --- unchanged; fires here (Neart na Gaoithe, 100%).
+-   v0.5 card-design decisions (M-12 pipeline bar, M-13 sparkline retained, M-14 CfD split deferred, M-15 REPD lag/Dogger Bank, M-16 manual quarterly source) --- unchanged.
+
+### Review trigger for v0.6
+
+Re-examined at week 10 ship/shelve. Specific questions:
+
+-   Did range-scoring read clearly on the card, or did two ratios/two slip years confuse readers vs a single figure?
+-   Did the full-history sparkline (§5 deviation) help readers see the trough-not-collapse story, or just look noisy?
+-   Did the fixed quarter-end anchor cause a stale figure that the staleness warning failed to catch?
+-   Should rubric §4 be formally rewritten to accommodate ranges at the v1 review, rather than carrying the generalisation only in this changelog entry?
