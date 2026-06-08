@@ -2,10 +2,15 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import ConstraintCostsCard from "../components/ConstraintCostsCard.astro";
+import OffshoreWindCard from "../components/OffshoreWindCard.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const dataPath = join(process.cwd(), "data/constraint-costs/headline.json");
 const headline = JSON.parse(readFileSync(dataPath, "utf-8"));
+
+const offshorePath = join(process.cwd(), "data/offshore-wind/headline.json");
+const offshore = JSON.parse(readFileSync(offshorePath, "utf-8"));
+
 ---
 
 <BaseLayout>
@@ -16,6 +21,13 @@ const headline = JSON.parse(readFileSync(dataPath, "utf-8"));
       Data refreshes monthly. <a href="/methodology">Methodology ↗</a>
     </p>
   </div>
+
+  <section class="tracker-section" aria-labelledby="scored-heading">
+    <h2 class="section-label" id="scored-heading">Scored metrics</h2>
+    <div class="card-grid">
+      <OffshoreWindCard data={offshore} />
+    </div>
+  </section>
 
   <section class="tracker-section" aria-labelledby="context-heading">
     <h2 class="section-label" id="context-heading">Context metrics</h2>
@@ -72,3 +84,4 @@ const headline = JSON.parse(readFileSync(dataPath, "utf-8"));
     gap: 1rem;
   }
 </style>
+

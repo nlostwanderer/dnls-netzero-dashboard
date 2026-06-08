@@ -18,8 +18,8 @@
     "retrieved": "2026-06-08"
   },
   "delivery_ratio": {
-    "low": 0.402,
-    "high": 0.345
+    "vs_low_target": 0.402,
+    "vs_high_target": 0.345
   },
   "traffic_light": "red",
   "slip_year": {

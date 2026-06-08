@@ -177,7 +177,7 @@ def build(csv_path: Path) -> dict:
                       "DESNZ CfD reform consultation, 21 Feb 2025.",
             "retrieved": date.today().isoformat(),
         },
-        "delivery_ratio": {"low": ratio_low, "high": ratio_high},
+        "delivery_ratio": {"vs_low_target": ratio_low, "vs_high_target": ratio_high},
         "traffic_light": traffic_light,
         "slip_year": {"low": slip_low, "high": slip_high},
         "pipeline_gw": {
@@ -215,4 +215,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+
     sys.exit(main())

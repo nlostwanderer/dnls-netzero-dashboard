@@ -1,0 +1,298 @@
+---
+interface Props {
+  data: {
+    metric: string;
+    card_type: string;
+    as_of: string;
+    source: string;
+    source_url: string;
+    operational_gw: number;
+    trailing_12m_gw: number;
+    single_project_sensitivity: boolean;
+    projected_2030_gw: number;
+    target: { low: number; high: number; unit: string; source: string; retrieved: string };
+    delivery_ratio: { vs_low_target: number; vs_high_target: number };
+    traffic_light: "green" | "amber" | "red";
+    slip_year: { low: number; high: number };
+    pipeline_gw: { operational: number; under_construction: number; awaiting_construction: number };
+    quarterly_additions: { q: string; gw: number }[];
+    caveats: string[];
+    methodology_ref: string;
+  };
+}
+
+const { data } = Astro.props;
+
+// ---- per-metric identity ----
+const ACCENT = "#5BA8B0"; // offshore wind: sea-glass teal
+
+const LIGHTS = {
+  green: { col: "#4CA86B", label: "On track" },
+  amber: { col: "#EF9F27", label: "Off track" },
+  red:   { col: "#D9534F", label: "Far off track" },
+} as const;
+const light = LIGHTS[data.traffic_light];
+
+// ---- dates ----
+const asOf = new Date(data.as_of).toLocaleDateString("en-GB", {
+  day: "numeric", month: "short", year: "numeric",
+});
+const retrieved = new Date(data.target.retrieved).toLocaleDateString("en-GB", {
+  day: "numeric", month: "short", year: "numeric",
+});
+
+// ---- ratio calculation display ----
+const ratioLowPct = (data.delivery_ratio.vs_high_target * 100).toFixed(1);
+const ratioHighPct = (data.delivery_ratio.vs_low_target * 100).toFixed(1);
+
+// plain-language fraction for the verdict (single verdict, span sits underneath)
+function fractionWord(lo: number, hi: number): string {
+  const mid = (lo + hi) / 2;
+  if (mid < 0.18) return "around a sixth";
+  if (mid < 0.29) return "around a quarter";
+  if (mid < 0.42) return "around a third";
+  if (mid < 0.58) return "around half";
+  if (mid < 0.72) return "around two thirds";
+  if (mid < 0.92) return "most";
+  return "all";
+}
+const verdictFraction = fractionWord(
+  data.delivery_ratio.vs_high_target,
+  data.delivery_ratio.vs_low_target
+);
+
+const slipLow = Math.min(data.slip_year.low, data.slip_year.high);
+const slipHigh = Math.max(data.slip_year.low, data.slip_year.high);
+
+// ---- pipeline stacked bar (contextual only, does NOT feed score) ----
+const pipe = data.pipeline_gw;
+const pipeTotal = pipe.operational + pipe.under_construction + pipe.awaiting_construction;
+const pipeSeg = [
+  { key: "operational", label: "Operational", gw: pipe.operational, col: ACCENT },
+  { key: "under_construction", label: "Under construction", gw: pipe.under_construction, col: "#8A6FB0" },
+  { key: "awaiting_construction", label: "Awaiting construction", gw: pipe.awaiting_construction, col: "#3a3a40" },
+].map((s) => ({ ...s, pct: (s.gw / pipeTotal) * 100 }));
+
+// ---- sparkline on a REAL TIME AXIS (gaps preserved), bars not line ----
+// discrete commissioning events -> vertical stems at true time positions.
+// axis extends to the data anchor (as_of), so the post-2025-Q3 trough shows as flat space.
+function qToYear(q: string): number {
+  const [y, qq] = q.split("-Q");
+  return Number(y) + (Number(qq) - 1) * 0.25 + 0.125; // quarter midpoint
+}
+const anchorDate = new Date(data.as_of);
+const anchorYear =
+  anchorDate.getFullYear() +
+  (anchorDate.getMonth() * 30 + anchorDate.getDate()) / 365;
+
+const spark = data.quarterly_additions.map((d) => ({ x: qToYear(d.q), gw: d.gw, q: d.q }));
+const xMin = spark[0].x;
+const xMax = anchorYear;
+const yMax = Math.max(...spark.map((d) => d.gw));
+
+const sparkW = 480;
+const sparkH = 72;
+const padB = 4;
+const padT = 6;
+
+const tx = (year: number) => ((year - xMin) / (xMax - xMin)) * sparkW;
+const ty = (gw: number) => sparkH - padB - (gw / yMax) * (sparkH - padB - padT);
+const baseY = sparkH - padB;
+
+const bars = spark.map((d) => ({ x: tx(d.x), y: ty(d.gw), q: d.q, gw: d.gw }));
+const lastBar = bars[bars.length - 1];
+
+const hasCaveats = data.caveats && data.caveats.length > 0;
+const single = data.single_project_sensitivity;
+---
+
+<article class="card">
+  <div class="accent-bar"></div>
+
+  <div class="card-type-badge" style={`color:${light.col};background:${light.col}1a;border-color:${light.col}40;`}>
+    <span class="badge-dot" style={`background:${light.col};`}></span>
+    {light.label}
+  </div>
+
+  <p class="metric-source">REPD · Offshore wind capacity</p>
+  <h2 class="metric-title">Offshore wind build-out vs 2030</h2>
+
+  <div class="headline-row">
+    <span class="headline-figure" style={`color:${ACCENT};`}>{data.operational_gw.toFixed(2)}</span>
+    <span class="headline-unit">GW operational</span>
+  </div>
+  <p class="fy-label">As of {asOf} · target {data.target.low}–{data.target.high} GW by 2030</p>
+
+  <!-- SINGLE PLAIN VERDICT; the dual span sits underneath -->
+  <div class="verdict" style={`border-color:${light.col}40;`}>
+    <p class="verdict-line">
+      At the last 12 months’ build rate, the UK reaches <strong style={`color:${light.col};`}>{verdictFraction}</strong>
+      of its 2030 offshore wind target.
+    </p>
+    <p class="verdict-detail">
+      {ratioLowPct}% of the upper goal ({data.target.high} GW) · {ratioHighPct}% of the lower goal ({data.target.low} GW).
+      At this pace the target isn’t met until <strong>{slipLow}–{slipHigh}</strong> — i.e. well past 2030.
+    </p>
+  </div>
+
+  <p class="explainer">
+    This scores the trailing-12-month build rate, projected to 2030, against the government’s stated
+    43–50 GW range. The pipeline bar below shows capacity under construction and awaiting construction —
+    that pipeline is <em>not</em> a delivery guarantee: projects in both buckets have been cancelled or
+    delayed before, so it doesn’t change the score.
+  </p>
+
+  <!-- PIPELINE STACKED BAR (contextual, does not affect score) -->
+  <div class="pipeline-area">
+    <p class="section-label">Pipeline · {pipeTotal.toFixed(1)} GW total</p>
+    <div class="pipeline-bar" role="img"
+      aria-label={`Pipeline: ${pipe.operational} GW operational, ${pipe.under_construction} GW under construction, ${pipe.awaiting_construction} GW awaiting construction`}>
+      {pipeSeg.map((s) => (
+        <span class="pipe-seg" style={`width:${s.pct}%;background:${s.col};`}></span>
+      ))}
+    </div>
+    <div class="pipeline-legend">
+      {pipeSeg.map((s) => (
+        <span class="legend-item">
+          <span class="legend-dot" style={`background:${s.col};`}></span>
+          {s.label} <span class="legend-gw">{s.gw} GW</span>
+        </span>
+      ))}
+    </div>
+  </div>
+
+  <!-- SPARKLINE: discrete commissioning events on a real time axis -->
+  <div class="sparkline-area">
+    <p class="section-label">Quarterly commissioning · 2000–2026 (to data anchor)</p>
+    <svg viewBox={`0 0 ${sparkW} ${sparkH + 20}`} width="100%" role="img"
+      aria-label="Quarterly offshore wind commissioning by capacity, 2000 to 2026, on a real time axis. Each bar is a quarter; gaps are quarters with no commissioning, including a flat run from mid-2025 to the data anchor.">
+      <line x1="0" y1={baseY} x2={sparkW} y2={baseY} stroke="#2a2a2e" stroke-width="1" />
+      {bars.map((b) => (
+        <line x1={b.x} y1={baseY} x2={b.x} y2={b.y} stroke={ACCENT} stroke-width="2.5" stroke-linecap="round" opacity="0.85" />
+      ))}
+      <circle cx={lastBar.x} cy={lastBar.y} r="3.5" fill={ACCENT} />
+      <text x="0" y={sparkH + 16} font-family="DM Mono, monospace" font-size="9" fill="#4a4a52">2000</text>
+      <text x={sparkW - 26} y={sparkH + 16} font-family="DM Mono, monospace" font-size="9" fill="#6b6b72">2026</text>
+      <text x="0" y="10" font-family="DM Mono, monospace" font-size="9" fill="#4a4a52">{yMax.toFixed(2)} GW</text>
+    </svg>
+  </div>
+
+  {hasCaveats && (
+    <div class="caveat-row">
+      <span class="caveat-icon" aria-hidden="true">⚠</span>
+      <ul class="caveat-list">
+        {data.caveats.map((c) => <li>{c}</li>)}
+      </ul>
+    </div>
+  )}
+
+  <div class="divider"></div>
+
+  <div class="meta-row">
+    <span class="meta-item">
+      Source: <a href={data.source_url} target="_blank" rel="noopener noreferrer">{data.source}</a>
+    </span>
+    <span class="meta-item">Target retrieved {retrieved}</span>
+    <a class="methodology-link" href="/methodology">methodology ↗</a>
+  </div>
+</article>
+
+<style>
+  .card {
+    background: #18181b;
+    border: 1px solid #2a2a2e;
+    border-radius: 16px;
+    padding: 1.75rem;
+    position: relative;
+    overflow: hidden;
+    max-width: 560px;
+  }
+  .accent-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #5ba8b0 0%, #d85a30 60%, #d4537e 100%);
+  }
+  .card-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: "DM Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid;
+    border-radius: 4px;
+    padding: 3px 8px;
+    margin-bottom: 1.25rem;
+  }
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .metric-source {
+    font-size: 12px; font-family: "DM Mono", monospace; color: #6b6b72;
+    letter-spacing: 0.04em; margin: 0 0 0.4rem;
+  }
+  .metric-title {
+    font-size: 17px; font-weight: 700; color: #e8e8ea; margin: 0 0 1.25rem; line-height: 1.3;
+  }
+  .headline-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 0.4rem; }
+  .headline-figure {
+    font-family: "DM Mono", monospace; font-size: 48px; font-weight: 500;
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .headline-unit { font-family: "DM Mono", monospace; font-size: 13px; color: #6b6b72; }
+  .fy-label { font-family: "DM Mono", monospace; font-size: 12px; color: #5b5b62; margin: 0 0 1.5rem; }
+
+  .verdict {
+    border: 1px solid; border-radius: 10px; padding: 12px 14px; margin-bottom: 1.5rem;
+    background: rgba(255,255,255,0.015);
+  }
+  .verdict-line { font-size: 15px; color: #d8d8da; line-height: 1.5; margin: 0 0 0.5rem; }
+  .verdict-line strong { font-weight: 600; }
+  .verdict-detail { font-family: "DM Mono", monospace; font-size: 11px; color: #7a7a82; line-height: 1.6; margin: 0; }
+  .verdict-detail strong { color: #b8b8bc; }
+
+  .explainer { font-size: 13px; color: #6b6b72; line-height: 1.65; margin: 0 0 1.5rem; }
+  .explainer em { font-style: italic; color: #8a8a90; }
+
+  .section-label {
+    font-size: 10px; font-family: "DM Mono", monospace; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #4a4a52; margin: 0 0 0.5rem;
+  }
+  .pipeline-area { margin-bottom: 1.5rem; }
+  .pipeline-bar {
+    display: flex; height: 14px; border-radius: 4px; overflow: hidden; margin-bottom: 0.6rem;
+  }
+  .pipe-seg { height: 100%; }
+  .pipeline-legend { display: flex; flex-wrap: wrap; gap: 12px; }
+  .legend-item {
+    font-family: "DM Mono", monospace; font-size: 10px; color: #7a7a82;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .legend-dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+  .legend-gw { color: #b8b8bc; }
+
+  .sparkline-area { margin-bottom: 1.5rem; }
+
+  .caveat-row {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: rgba(186, 117, 23, 0.07); border: 1px solid rgba(186, 117, 23, 0.2);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 1.25rem;
+  }
+  .caveat-icon { font-size: 13px; color: #ba7517; flex-shrink: 0; margin-top: 2px; }
+  .caveat-list {
+    font-family: "DM Mono", monospace; font-size: 11px; color: #7a6a45;
+    line-height: 1.6; margin: 0; padding: 0; list-style: none;
+  }
+  .caveat-list li + li { margin-top: 0.5rem; }
+
+  .divider { height: 1px; background: #2a2a2e; margin: 1.25rem 0; }
+  .meta-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .meta-item { font-family: "DM Mono", monospace; font-size: 10px; color: #4a4a52; letter-spacing: 0.06em; }
+  .meta-item a { color: #5dcaa5; text-decoration: none; }
+  .meta-item a:hover { text-decoration: underline; }
+  .methodology-link {
+    font-family: "DM Mono", monospace; font-size: 10px; color: #4a4a52;
+    text-decoration: none; letter-spacing: 0.06em;
+  }
+  .methodology-link:hover { color: #5dcaa5; }
+</style>
